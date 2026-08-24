@@ -35,6 +35,7 @@ enum EPUBScriptScope {
     /// The server used to serve publication resources and static assets to
     /// the web view.
     let server: WebViewServer
+    let renderingScheduler: EPUBRenderingScheduler
 
     /// Format sniffer used to infer the media type of resources served with
     /// the `server`.
@@ -53,7 +54,8 @@ enum EPUBScriptScope {
             .appendingPath("Assets/Static", isDirectory: true)
 
         let formatSniffer = DefaultFormatSniffer()
-        let server = WebViewServer(scheme: "readium", formatSniffer: formatSniffer)
+        let renderingScheduler = EPUBRenderingScheduler()
+        let server = WebViewServer(scheme: "readium", formatSniffer: formatSniffer, renderingScheduler: renderingScheduler)
 
         // Serve static assets directory.
         let assetsBaseURL = server.serve(directory: assetsDirectory, at: "assets")
@@ -63,6 +65,7 @@ enum EPUBScriptScope {
             readingOrder: readingOrder,
             config: config,
             server: server,
+            renderingScheduler: renderingScheduler,
             assetsBaseURL: assetsBaseURL,
             formatSniffer: formatSniffer
         )
@@ -85,6 +88,7 @@ enum EPUBScriptScope {
         readingOrder: ReadingOrder,
         config: EPUBNavigatorViewController.Configuration,
         server: WebViewServer,
+        renderingScheduler: EPUBRenderingScheduler,
         assetsBaseURL: any AbsoluteURL,
         formatSniffer: FormatSniffer
     ) {
@@ -124,6 +128,7 @@ enum EPUBScriptScope {
             publication: publication
         )
         self.server = server
+        self.renderingScheduler = renderingScheduler
         self.assetsBaseURL = assetsBaseURL
         self.formatSniffer = formatSniffer
         servedFonts = server.serve(config.fontFamilyDeclarations)

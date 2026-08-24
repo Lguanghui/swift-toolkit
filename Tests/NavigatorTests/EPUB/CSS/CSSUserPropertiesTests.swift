@@ -20,6 +20,7 @@ class CSSUserPropertiesTests: XCTestCase {
                 "--USER__darkenImages": nil,
                 "--USER__invertImages": nil,
                 "--USER__textColor": nil,
+                "--USER__publisherColors": nil,
                 "--USER__backgroundColor": nil,
                 "--USER__fontOverride": nil,
                 "--USER__fontFamily": nil,
@@ -49,6 +50,7 @@ class CSSUserPropertiesTests: XCTestCase {
                 darkenImages: true,
                 invertImages: true,
                 textColor: CSSHexColor("#FF0000"),
+                publisherColors: true,
                 backgroundColor: CSSHexColor("#00FF00"),
                 fontOverride: true,
                 fontFamily: ["Times New"],
@@ -73,6 +75,7 @@ class CSSUserPropertiesTests: XCTestCase {
                 "--USER__darkenImages": "readium-darken-on",
                 "--USER__invertImages": "readium-invert-on",
                 "--USER__textColor": "#FF0000",
+                "--USER__publisherColors": "readium-publisher-colors-on",
                 "--USER__backgroundColor": "#00FF00",
                 "--USER__fontOverride": "readium-font-on",
                 "--USER__fontFamily": "\"Times New\"",
@@ -133,6 +136,7 @@ class CSSUserPropertiesTests: XCTestCase {
                 darkenImages: true,
                 invertImages: true,
                 textColor: CSSHexColor("#FF0000"),
+                publisherColors: true,
                 backgroundColor: CSSHexColor("#00FF00"),
                 fontOverride: true,
                 fontFamily: ["Times New", "Comic Sans"],
@@ -167,6 +171,7 @@ class CSSUserPropertiesTests: XCTestCase {
             --USER__pageMargins: 1.20000 !important;
             --USER__paraIndent: 6.70000rem !important;
             --USER__paraSpacing: 5.60000pt !important;
+            --USER__publisherColors: readium-publisher-colors-on !important;
             --USER__textAlign: justify !important;
             --USER__textColor: #FF0000 !important;
             --USER__typeScale: 3.40000 !important;

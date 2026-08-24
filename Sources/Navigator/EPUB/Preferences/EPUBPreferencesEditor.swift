@@ -314,6 +314,19 @@ public final class EPUBPreferencesEditor: StatefulPreferencesEditor<EPUBPreferen
             isEffective: { [layout] _ in layout == .reflowable }
         )
 
+    /// Determines whether text colors declared by the publication are
+    /// preserved or replaced by the reader theme.
+    ///
+    /// Only effective with reflowable publications.
+    public lazy var publisherColorPolicy: AnyEnumPreference<PublisherColorPolicy> =
+        enumPreference(
+            preference: \.publisherColorPolicy,
+            setting: \.publisherColorPolicy,
+            defaultEffectiveValue: defaults.publisherColorPolicy ?? .replace,
+            isEffective: { [layout] _ in layout == .reflowable },
+            supportedValues: [.automatic, .preserve, .replace]
+        )
+
     /// Direction of the reading progression across resources.
     ///
     /// This can be changed to influence directly the layout (e.g. LTR or RTL).

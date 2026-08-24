@@ -28,6 +28,7 @@ public struct EPUBSettings: ConfigurableSettings, Sendable {
     public var paragraphIndent: Double?
     public var paragraphSpacing: Double?
     public var publisherStyles: Bool
+    public var publisherColorPolicy: PublisherColorPolicy
     public var readingProgression: ReadingProgression
     public var scroll: Bool
     public var spread: Spread
@@ -41,6 +42,17 @@ public struct EPUBSettings: ConfigurableSettings, Sendable {
 
     public var effectiveBackgroundColor: Color {
         backgroundColor ?? theme.backgroundColor
+    }
+
+    var preservesPublisherColors: Bool {
+        switch publisherColorPolicy {
+        case .automatic:
+            return theme == .light
+        case .preserve:
+            return true
+        case .replace:
+            return false
+        }
     }
 
     let cssLayout: CSSLayout
@@ -63,6 +75,7 @@ public struct EPUBSettings: ConfigurableSettings, Sendable {
         paragraphIndent: Double?,
         paragraphSpacing: Double?,
         publisherStyles: Bool,
+        publisherColorPolicy: PublisherColorPolicy,
         readingProgression: ReadingProgression,
         scroll: Bool,
         spread: Spread,
@@ -91,6 +104,7 @@ public struct EPUBSettings: ConfigurableSettings, Sendable {
         self.paragraphIndent = paragraphIndent
         self.paragraphSpacing = paragraphSpacing
         self.publisherStyles = publisherStyles
+        self.publisherColorPolicy = publisherColorPolicy
         self.readingProgression = readingProgression
         self.scroll = scroll
         self.spread = spread
@@ -177,6 +191,9 @@ public struct EPUBSettings: ConfigurableSettings, Sendable {
             publisherStyles: preferences.publisherStyles
                 ?? defaults.publisherStyles
                 ?? true,
+            publisherColorPolicy: preferences.publisherColorPolicy
+                ?? defaults.publisherColorPolicy
+                ?? .replace,
             readingProgression: readingProgression,
             scroll: scroll,
             spread: preferences.spread
@@ -221,6 +238,7 @@ public struct EPUBDefaults: Sendable {
     public var paragraphIndent: Double?
     public var paragraphSpacing: Double?
     public var publisherStyles: Bool?
+    public var publisherColorPolicy: PublisherColorPolicy?
     public var readingProgression: ReadingProgression?
     public var scroll: Bool?
     public var spread: Spread?
@@ -245,6 +263,7 @@ public struct EPUBDefaults: Sendable {
         paragraphIndent: Double? = nil,
         paragraphSpacing: Double? = nil,
         publisherStyles: Bool? = nil,
+        publisherColorPolicy: PublisherColorPolicy? = nil,
         readingProgression: ReadingProgression? = nil,
         scroll: Bool? = nil,
         spread: Spread? = nil,
@@ -268,6 +287,7 @@ public struct EPUBDefaults: Sendable {
         self.paragraphIndent = paragraphIndent
         self.paragraphSpacing = paragraphSpacing
         self.publisherStyles = publisherStyles
+        self.publisherColorPolicy = publisherColorPolicy
         self.readingProgression = readingProgression
         self.scroll = scroll
         self.spread = spread

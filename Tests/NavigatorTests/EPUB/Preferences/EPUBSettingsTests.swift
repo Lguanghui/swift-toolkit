@@ -28,6 +28,27 @@ class EPUBSettingsTests: XCTestCase {
         ).cssLayout
     }
 
+    func resolveSettings(defaults: EPUBDefaults = EPUBDefaults(), preferences: EPUBPreferences = EPUBPreferences()) -> EPUBSettings {
+        EPUBSettings(preferences: preferences, defaults: defaults, metadata: Metadata(title: "Fake title"))
+    }
+
+    func testPublisherColorPolicyDefaultsToReplace() {
+        XCTAssertEqual(resolveSettings().publisherColorPolicy, .replace)
+        XCTAssertFalse(resolveSettings().preservesPublisherColors)
+    }
+
+    func testAutomaticPublisherColorPolicyFollowsTheme() {
+        XCTAssertTrue(resolveSettings(preferences: EPUBPreferences(publisherColorPolicy: .automatic, theme: .light)).preservesPublisherColors)
+        XCTAssertFalse(resolveSettings(preferences: EPUBPreferences(publisherColorPolicy: .automatic, theme: .dark)).preservesPublisherColors)
+        XCTAssertFalse(resolveSettings(preferences: EPUBPreferences(publisherColorPolicy: .automatic, theme: .sepia)).preservesPublisherColors)
+    }
+
+    func testExplicitPublisherColorPolicyOverridesDefault() {
+        let defaults = EPUBDefaults(publisherColorPolicy: .preserve)
+        XCTAssertTrue(resolveSettings(defaults: defaults).preservesPublisherColors)
+        XCTAssertFalse(resolveSettings(defaults: defaults, preferences: EPUBPreferences(publisherColorPolicy: .replace)).preservesPublisherColors)
+    }
+
     func testComputeLayoutWithoutPreferencesOrDefaults() {
         XCTAssertEqual(
             resolveLayout(),

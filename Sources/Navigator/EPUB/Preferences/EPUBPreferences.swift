@@ -72,6 +72,10 @@ public struct EPUBPreferences: ConfigurablePreferences, Sendable {
     /// Many settings require this to be off.
     public var publisherStyles: Bool?
 
+    /// Determines whether text colors declared by the publication are
+    /// preserved or replaced by the reader theme.
+    public var publisherColorPolicy: PublisherColorPolicy?
+
     /// Direction of the reading progression across resources.
     public var readingProgression: ReadingProgression?
 
@@ -125,6 +129,7 @@ public struct EPUBPreferences: ConfigurablePreferences, Sendable {
         paragraphIndent: Double? = nil,
         paragraphSpacing: Double? = nil,
         publisherStyles: Bool? = nil,
+        publisherColorPolicy: PublisherColorPolicy? = nil,
         readingProgression: ReadingProgression? = nil,
         scroll: Bool? = nil,
         spread: Spread? = nil,
@@ -153,6 +158,7 @@ public struct EPUBPreferences: ConfigurablePreferences, Sendable {
         self.paragraphIndent = paragraphIndent
         self.paragraphSpacing = paragraphSpacing.map { max($0, 0) }
         self.publisherStyles = publisherStyles
+        self.publisherColorPolicy = publisherColorPolicy
         self.readingProgression = readingProgression
         self.scroll = scroll
         self.spread = [nil, .never, .always].contains(spread) ? spread : nil
@@ -184,6 +190,7 @@ public struct EPUBPreferences: ConfigurablePreferences, Sendable {
             paragraphIndent: other.paragraphIndent ?? paragraphIndent,
             paragraphSpacing: other.paragraphSpacing ?? paragraphSpacing,
             publisherStyles: other.publisherStyles ?? publisherStyles,
+            publisherColorPolicy: other.publisherColorPolicy ?? publisherColorPolicy,
             readingProgression: other.readingProgression ?? readingProgression,
             scroll: other.scroll ?? scroll,
             spread: other.spread ?? spread,

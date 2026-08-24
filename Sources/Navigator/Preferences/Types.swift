@@ -92,6 +92,19 @@ public enum Theme: String, Codable, Hashable, Sendable {
     private static let sepiaBackgroundColor = Color(hex: "#faf4e8")!
 }
 
+/// Policy used to resolve text colors declared by the publication.
+public enum PublisherColorPolicy: String, Codable, Hashable, Sendable {
+    /// Preserves publisher colors in the light theme and replaces them in
+    /// dark and sepia themes to keep sufficient contrast.
+    case automatic
+
+    /// Always preserves colors declared by the publication.
+    case preserve
+
+    /// Replaces publication colors with the reader's text and link colors.
+    case replace
+}
+
 /// Number of columns displayed in a reflowable document.
 public enum ColumnCount: String, Codable, Hashable, Sendable {
     case auto

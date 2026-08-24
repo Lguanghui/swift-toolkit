@@ -270,9 +270,12 @@ body {
 /* we don’t need to redeclare bg-color and color for :root since we will inherit and update from day/default mode */
 
 :root[style*="readium-night-on"] *:not(a) {
-  color: inherit !important;
   background-color: transparent !important;
   border-color: currentColor !important;
+}
+
+:root[style*="readium-night-on"][style*="readium-publisher-colors-off"] *:not(a) {
+  color: inherit !important;
 }
 
 :root[style*="readium-night-on"] svg text {
@@ -346,8 +349,11 @@ body {
 /* we don’t need to redeclare bg-color and color for :root since we will inherit and update from day/default mode */
 
 :root[style*="readium-sepia-on"] *:not(a) {
-  color: inherit !important;
   background-color: transparent !important;
+}
+
+:root[style*="readium-sepia-on"][style*="readium-publisher-colors-off"] *:not(a) {
+  color: inherit !important;
 }
 
 :root[style*="readium-sepia-on"] a:link,
@@ -480,8 +486,18 @@ body {
   color: var(--USER__textColor) !important;
 }
 
-:root[style*="--USER__textColor"] *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(pre) {
+:root[style*="--USER__textColor"][style*="readium-publisher-colors-off"] *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(pre):not(a) {
   color: inherit !important;
+}
+
+:root[style*="--USER__textColor"] a:link,
+:root[style*="--USER__textColor"] a:link * {
+  color: var(--RS__linkColor, #0000EE) !important;
+}
+
+:root[style*="--USER__textColor"] a:visited,
+:root[style*="--USER__textColor"] a:visited * {
+  color: var(--RS__visitedColor, #551A8B) !important;
 }
 
 /* Readium CSS

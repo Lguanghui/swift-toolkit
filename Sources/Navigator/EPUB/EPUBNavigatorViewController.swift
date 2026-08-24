@@ -230,6 +230,7 @@ open class EPUBNavigatorViewController: InputObservableViewController,
     /// Current navigation state.
     private var state: State = .initializing {
         didSet {
+            viewModel.renderingScheduler.updateNavigatorIdle(state == .idle)
             if config.debugState {
                 log(.debug, "* \(state)")
             }
@@ -252,6 +253,54 @@ open class EPUBNavigatorViewController: InputObservableViewController,
     private let viewModel: EPUBNavigatorViewModel
     public var publication: Publication {
         viewModel.publication
+    }
+
+    /// Creates a dedicated visual pagination service sharing this navigator's
+    /// resource server, injected styles and resource cache.
+    ///
+    /// Reusing the server avoids opening a second navigator and prevents EPUB
+    /// resources from being decompressed and transformed twice.
+    public func makePaginationService(viewportSize: CGSize, contentInset: UIEdgeInsets) throws -> EPUBPaginationService {
+        try EPUBPaginationService(viewModel: viewModel, viewportSize: viewportSize, contentInset: contentInset)
+    }
+
+    /// Returns the visual pagination result measured from the currently visible
+    /// resource, avoiding a duplicate render in a background web view.
+    public func paginationResultForCurrentResource(_ link: Link, resolving links: [Link] = []) async throws -> EPUBPaginationService.Result? {
+        guard
+            state == .idle,
+            let spreadView = paginationView?.currentView as? EPUBSpreadView,
+            spreadView.isSpreadInitialized
+        else {
+            return nil
+        }
+        let targetHREF = link.url().removingFragment()
+        let containsResource = spreadView.spread.readingOrderIndices.contains { index in
+            readingOrder[index].url().removingFragment().isEquivalentTo(targetHREF)
+        }
+        guard containsResource else { return nil }
+
+        return try await EPUBPaginationService.measure(in: spreadView.webView, resolving: links)
+    }
+
+    /// Number of Readium positions in each reading-order resource. This can be
+    /// used for a temporary page estimate while visual pagination is incomplete.
+    public var positionCountsByReadingOrder: [Int] {
+        positionsByReadingOrder.map(\.count)
+    }
+
+    /// Defers background pagination while the reader is handling visible user
+    /// interaction. Visible resource requests are never delayed.
+    public func deferBackgroundPagination(for interval: TimeInterval = 0.9) {
+        viewModel.renderingScheduler.deferBackgroundWork(for: interval)
+    }
+
+    public func suspendBackgroundPagination() {
+        viewModel.renderingScheduler.suspendBackgroundWork()
+    }
+
+    public func resumeBackgroundPagination(after interval: TimeInterval = 0.5) {
+        viewModel.renderingScheduler.resumeBackgroundWork(after: interval)
     }
 
     var config: Configuration {

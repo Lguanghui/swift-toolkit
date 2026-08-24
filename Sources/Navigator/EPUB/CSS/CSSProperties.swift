@@ -76,6 +76,10 @@ public struct CSSUserProperties: CSSProperties, Sendable {
     /// To reset, remove the CSS variable.
     public var textColor: CSSColor?
 
+    /// Preserves text colors declared by the publication instead of replacing
+    /// them recursively with `textColor`.
+    public var publisherColors: Bool?
+
     /// The background-color for the whole screen. To reset, remove the CSS variable.
     public var backgroundColor: CSSColor?
 
@@ -173,6 +177,7 @@ public struct CSSUserProperties: CSSProperties, Sendable {
         darkenImages: Bool? = nil,
         invertImages: Bool? = nil,
         textColor: CSSColor? = nil,
+        publisherColors: Bool? = nil,
         backgroundColor: CSSColor? = nil,
         fontOverride: Bool? = nil,
         fontFamily: [String]? = nil,
@@ -197,6 +202,7 @@ public struct CSSUserProperties: CSSProperties, Sendable {
         self.darkenImages = darkenImages
         self.invertImages = invertImages
         self.textColor = textColor
+        self.publisherColors = publisherColors
         self.backgroundColor = backgroundColor
         self.fontOverride = fontOverride
         self.fontFamily = fontFamily
@@ -231,6 +237,7 @@ public struct CSSUserProperties: CSSProperties, Sendable {
 
         // Colors
         props.putCSS(name: "--USER__textColor", value: textColor)
+        props.putCSS(name: "--USER__publisherColors", value: CSSFlag(name: "publisher-colors", isEnabled: publisherColors))
         props.putCSS(name: "--USER__backgroundColor", value: backgroundColor)
 
         // Typography

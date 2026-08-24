@@ -17,10 +17,12 @@ import WebKit
 
     /// Format sniffer used to infer the media type of served resources.
     let formatSniffer: FormatSniffer
+    private let renderingScheduler: EPUBRenderingScheduler
 
-    init(scheme: String, formatSniffer: FormatSniffer) {
+    init(scheme: String, formatSniffer: FormatSniffer, renderingScheduler: EPUBRenderingScheduler) {
         self.scheme = scheme
         self.formatSniffer = formatSniffer
+        self.renderingScheduler = renderingScheduler
         super.init()
     }
 
@@ -104,6 +106,7 @@ import WebKit
 
     /// Tracks active tasks for cancellation support.
     private var activeTasks: [ObjectIdentifier: Task<Void, Never>] = [:]
+    private var backgroundWebViews: Set<ObjectIdentifier> = []
 
     /// Bounded cache of buffered resources keyed by publication-relative URL.
     ///
@@ -111,7 +114,7 @@ import WebKit
     /// resources benefit from forward-seek optimization instead of
     /// decompressing from offset 0 on every request.
     ///
-    /// Oldest entries are evicted when the cache exceeds its capacity.
+    /// Least-recently-used entries are evicted when the cache exceeds its capacity.
     private var resourceCache = BoundedResourceCache()
 
     /// Removes cached resources matching the given predicate, forcing them to
@@ -120,13 +123,30 @@ import WebKit
         resourceCache.remove(where: predicate)
     }
 
+    func registerBackgroundWebView(_ webView: WKWebView) {
+        backgroundWebViews.insert(ObjectIdentifier(webView))
+    }
+
+    func unregisterBackgroundWebView(_ webView: WKWebView) {
+        backgroundWebViews.remove(ObjectIdentifier(webView))
+    }
+
     // MARK: - WKURLSchemeHandler
 
     func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
         let taskID = ObjectIdentifier(urlSchemeTask)
+        let isBackgroundRequest = backgroundWebViews.contains(ObjectIdentifier(webView))
         activeTasks[taskID] = Task {
+            defer { activeTasks.removeValue(forKey: taskID) }
+            if isBackgroundRequest {
+                do {
+                    try await renderingScheduler.waitUntilBackgroundWorkIsAllowed()
+                } catch {
+                    return
+                }
+            }
+            guard !Task.isCancelled else { return }
             await serve(urlSchemeTask)
-            _ = activeTasks.removeValue(forKey: taskID)
         }
     }
 
@@ -354,18 +374,23 @@ private extension URLRequest {
     }
 }
 
-/// A simple bounded FIFO cache for ``Resource`` instances.
+/// A bounded LRU cache for ``Resource`` instances.
 ///
 /// Evicts the oldest entries when the number of cached resources exceeds
 /// ``capacity``, preventing unbounded memory growth as the user navigates
 /// through chapters.
 private struct BoundedResourceCache {
-    private let capacity = 8
+    private let capacity = 24
     private var entries: [RelativeURL: (Resource, MediaType)] = [:]
     private var order: [RelativeURL] = []
 
     subscript(key: RelativeURL) -> (Resource, MediaType)? {
-        entries[key]
+        mutating get {
+            guard let entry = entries[key] else { return nil }
+            order.removeAll { $0.isEquivalentTo(key) }
+            order.append(key)
+            return entry
+        }
     }
 
     mutating func set(_ key: RelativeURL, resource: Resource, mediaType: MediaType) {

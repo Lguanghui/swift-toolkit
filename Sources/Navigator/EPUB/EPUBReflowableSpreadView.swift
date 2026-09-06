@@ -169,33 +169,33 @@ final class EPUBReflowableSpreadView: EPUBSpreadView {
             return await super.go(to: direction, options: options)
         }
 
-        let factor: CGFloat = {
+        // Do not fall through to the adjacent resource while the web view has
+        // no usable viewport. Its layout is still settling in this state, so
+        // the chapter boundary cannot be determined reliably yet.
+        guard scrollView.bounds.width > 0 else { return true }
+
+        let function: String = {
             switch direction {
             case .left:
-                return -1
+                return "scrollLeft"
             case .right:
-                return 1
+                return "scrollRight"
             }
         }()
 
-        guard scrollView.bounds.width > 0 else { return false }
-        let offsetX = scrollView.bounds.width * factor
-        let targetX = round((scrollView.contentOffset.x + offsetX) / offsetX) * offsetX
-        guard 0 ..< scrollView.contentSize.width ~= targetX else {
-            return false
+        // Ask the document to determine and perform the movement atomically.
+        // UIKit's contentSize/contentOffset can briefly be out of sync with
+        // window.scrollX while WebKit is laying out or animating columns. Using
+        // those transient values here could either skip the rest of a chapter
+        // or report a successful turn while remaining on its last page.
+        let dir = viewModel.readingProgression.rawValue
+        let result = await evaluateScript("readium.\(function)('\(dir)', \(options.animated));")
+        guard case let .success(value) = result, let moved = value as? Bool else {
+            // Only an explicit boundary response should trigger a resource
+            // change. A script failure must not skip unread pages.
+            return true
         }
-
-        // We use JavaScript instead of `UIScrollView.setContentOffset()` to
-        // prevent glitches when turning pages without animation.
-        // See https://github.com/readium/swift-toolkit/issues/737#issuecomment-4090386881
-        //
-        // `scrollBy` is used instead of `scrollTo` because RTL content uses
-        // negative `window.scrollX` values in WKWebView, whereas UIKit's
-        // `contentOffset.x` is always non-negative. A relative displacement
-        // (`offsetX`) is coordinate-system agnostic and works for both LTR and
-        // RTL.
-        let behavior = options.animated ? "smooth" : "instant"
-        await evaluateScript("window.scrollBy({ left: \(offsetX), behavior: '\(behavior)' });")
+        guard moved else { return false }
 
         if options.animated {
             // Waits for the scroll animation to finish.

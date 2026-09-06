@@ -230,9 +230,16 @@ final class PaginationView: UIView, Loggable {
     }
 
     private func loadPages() {
-        loadPagesTask?.cancel()
+        let previousTask = loadPagesTask
+        previousTask?.cancel()
         loadPagesTask = Task { @MainActor in
+            // A cancelled load may still be awaiting a non-cancellable web
+            // view navigation. Wait for it to finish before applying the new
+            // queue so an obsolete location cannot win the race afterward.
+            await previousTask?.value
+            guard !Task.isCancelled else { return }
             await loadNextPage()
+            guard !Task.isCancelled else { return }
             delegate?.paginationViewDidUpdateViews(self)
         }
     }
@@ -240,6 +247,7 @@ final class PaginationView: UIView, Loggable {
     private var loadPagesTask: Task<Void, Never>?
 
     private func loadNextPage() async {
+        guard !Task.isCancelled else { return }
         guard let (index, location) = loadingIndexQueue.popFirst() else {
             return
         }
@@ -258,6 +266,7 @@ final class PaginationView: UIView, Loggable {
         }
 
         await view.go(to: location, animated: false)
+        guard !Task.isCancelled else { return }
         await loadNextPage()
     }
 

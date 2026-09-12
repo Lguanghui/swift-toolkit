@@ -528,6 +528,10 @@ class EPUBSpreadView: UIView, Loggable, PageView {
         }
     }
 
+    func canSwipeToAdjacentPage(forward: Bool) -> Bool {
+        isSpreadLoaded
+    }
+
     func go(to direction: Direction, options: NavigatorGoOptions) async -> Bool {
         // The default implementation of a spread view considers that its content is entirely visible on screen.
         false

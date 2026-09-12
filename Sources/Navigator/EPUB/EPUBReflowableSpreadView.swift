@@ -164,6 +164,25 @@ final class EPUBReflowableSpreadView: EPUBSpreadView {
         try? await Task.sleep(seconds: delayed ? 0.3 : 0)
     }
 
+    override func canSwipeToAdjacentPage(forward: Bool) -> Bool {
+        guard !viewModel.scroll else { return super.canSwipeToAdjacentPage(forward: forward) }
+        guard isSpreadLoaded, !scrollView.isDecelerating,
+              pendingScrollAnimation == nil, let progression
+        else { return false }
+
+        // WebKit can hand a fast repeated drag to the outer scroll view while
+        // the resource still has unread pages. Require both document progress
+        // and native geometry to agree on the boundary before accepting it.
+        let width = scrollView.bounds.width
+        let contentWidth = scrollView.contentSize.width
+        guard width > 0, contentWidth >= width else { return false }
+        let offset = abs(scrollView.contentOffset.x)
+        if forward {
+            return progression.upperBound >= 1 - 0.000001 && offset >= contentWidth - width - 1
+        }
+        return progression.lowerBound <= 0.000001 && offset <= 1
+    }
+
     override func go(to direction: EPUBSpreadView.Direction, options: NavigatorGoOptions) async -> Bool {
         guard !viewModel.scroll else {
             return await super.go(to: direction, options: options)

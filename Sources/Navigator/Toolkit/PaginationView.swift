@@ -30,6 +30,9 @@ enum PageLocation: Equatable {
 }
 
 protocol PageView {
+    /// Whether a user drag may leave this resource in reading order.
+    func canSwipeToAdjacentPage(forward: Bool) -> Bool
+
     /// Moves the page to the given internal location.
     func go(to location: PageLocation, animated: Bool) async
 }
@@ -79,7 +82,8 @@ final class PaginationView: UIView, Loggable {
         loadedViews[currentIndex]
     }
 
-    private let scrollView = UIScrollView()
+    private let scrollView = PaginationScrollView()
+    private var dragStartIndex: Int?
 
     /// Set while a transition animation is in progress to prevent
     /// `layoutSubviews` from resetting `contentOffset` and interrupting the
@@ -104,6 +108,9 @@ final class PaginationView: UIView, Loggable {
         super.init(frame: frame)
 
         scrollView.delegate = self
+        scrollView.shouldBeginPan = { [weak self] velocity in
+            self?.canBeginDragging(withVelocity: velocity) == true
+        }
         scrollView.frame = bounds
         scrollView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         scrollView.isPagingEnabled = true
@@ -184,6 +191,7 @@ final class PaginationView: UIView, Loggable {
     func reloadAtIndex(_ index: Int, location: PageLocation, pageCount: Int, readingProgression: ReadingProgression) {
         precondition(pageCount >= 1)
         precondition(0 ..< pageCount ~= index)
+        dragStartIndex = nil
 
         self.pageCount = pageCount
         self.readingProgression = readingProgression
@@ -316,6 +324,14 @@ final class PaginationView: UIView, Loggable {
 
     // MARK: - Navigation
 
+    func canBeginDragging(withVelocity velocity: CGPoint) -> Bool {
+        guard !isAnimatingContentOffset, velocity.x != 0 else { return false }
+        let forward = readingProgression == .rtl ? velocity.x > 0 : velocity.x < 0
+        let targetIndex = currentIndex + (forward ? 1 : -1)
+        return (0 ..< pageCount).contains(targetIndex)
+            && currentView?.canSwipeToAdjacentPage(forward: forward) == true
+    }
+
     /// Go to the page view with given index.
     ///
     /// - Parameters:
@@ -326,6 +342,7 @@ final class PaginationView: UIView, Loggable {
         guard 0 ..< pageCount ~= index else {
             return false
         }
+        dragStartIndex = nil
 
         let shouldAnimate = options.animated && !UIAccessibility.isReduceMotionEnabled
 
@@ -438,6 +455,10 @@ final class PaginationView: UIView, Loggable {
 }
 
 extension PaginationView: UIScrollViewDelegate {
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        dragStartIndex = currentIndex
+    }
+
     // We disable the scroll once the user releases the drag to prevent scrolling through more than 1 resource at a
     // time. Otherwise, because the pagination view's scroll view would have the focus during the scroll gesture, the
     // scrollable content of the resources would be skipped.
@@ -455,22 +476,51 @@ extension PaginationView: UIScrollViewDelegate {
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             scrollView.isScrollEnabled = isScrollEnabled
+            finishDragging(scrollView)
         }
     }
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        finishDragging(scrollView)
+    }
+
+    private func finishDragging(_ scrollView: UIScrollView) {
         // A programmatic slide animation sets isScrollEnabled = false and drives the
         // content offset directly. If a delegate callback fires during or just after
         // that window it could call setCurrentIndex with a stale offset, so we bail out.
-        guard !isAnimatingContentOffset else { return }
-
+        guard !isAnimatingContentOffset, !scrollView.isDragging, !scrollView.isDecelerating else { return }
         scrollView.isScrollEnabled = isScrollEnabled
+        guard let startIndex = dragStartIndex else {
+            scrollView.contentOffset.x = xOffsetForIndex(currentIndex)
+            return
+        }
+        dragStartIndex = nil
+
+        guard scrollView.frame.width > 0, currentIndex == startIndex else { return }
 
         let currentOffset = (readingProgression == .rtl)
             ? scrollView.contentSize.width - (scrollView.contentOffset.x + scrollView.frame.width)
             : scrollView.contentOffset.x
 
         let newIndex = Int(round(currentOffset / scrollView.frame.width))
+        guard (0 ..< pageCount).contains(newIndex), abs(newIndex - startIndex) <= 1 else {
+            scrollView.contentOffset.x = xOffsetForIndex(currentIndex)
+            return
+        }
         setCurrentIndex(newIndex)
+        scrollView.contentOffset.x = xOffsetForIndex(currentIndex)
+    }
+}
+
+private final class PaginationScrollView: UIScrollView {
+    var shouldBeginPan: ((CGPoint) -> Bool)?
+
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer === panGestureRecognizer,
+           shouldBeginPan?(panGestureRecognizer.velocity(in: self)) == false
+        {
+            return false
+        }
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
     }
 }

@@ -53,15 +53,18 @@ struct PaginationViewTests {
     func completesDragOnce() async throws {
         let delegate = TestDelegate()
         let view = await makeView(delegate: delegate)
+        let previousPage = try #require(view.currentView as? TestPage)
         let scrollView = try #require(view.subviews.compactMap { $0 as? UIScrollView }.first)
         view.scrollViewWillBeginDragging(scrollView)
         scrollView.contentOffset.x = 640
         view.scrollViewDidEndDragging(scrollView, willDecelerate: false)
         #expect(view.currentIndex == 2)
+        #expect(previousPage.disappearanceCount == 1)
 
         scrollView.contentOffset.x = 0
         view.scrollViewDidEndDecelerating(scrollView)
         #expect(view.currentIndex == 2)
+        #expect(previousPage.disappearanceCount == 1)
     }
 
     @Test("An incomplete drag does not leave an offset for the next ordinary swipe")
@@ -90,12 +93,17 @@ struct PaginationViewTests {
     private final class TestPage: UIView, PageView {
         var canMoveForward = false
         var canMoveBackward = false
+        var disappearanceCount = 0
 
         func canSwipeToAdjacentPage(forward: Bool) -> Bool {
             forward ? canMoveForward : canMoveBackward
         }
 
         func go(to location: PageLocation, animated: Bool) async {}
+
+        func pageDidDisappear() {
+            disappearanceCount += 1
+        }
     }
 
     private final class TestDelegate: PaginationViewDelegate {

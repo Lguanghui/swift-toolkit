@@ -29,12 +29,16 @@ enum PageLocation: Equatable {
     }
 }
 
+@MainActor
 protocol PageView {
     /// Whether a user drag may leave this resource in reading order.
     func canSwipeToAdjacentPage(forward: Bool) -> Bool
 
     /// Moves the page to the given internal location.
     func go(to location: PageLocation, animated: Bool) async
+
+    /// Called when the page view is not the currently visible page anymore.
+    func pageDidDisappear()
 }
 
 @MainActor
@@ -217,6 +221,7 @@ final class PaginationView: UIView, Loggable {
         let movingBackward = (currentIndex - 1 == index)
         let location = location ?? (movingBackward ? .end : .start)
 
+        let previousView = currentView
         currentIndex = index
 
         // To make sure that the views the most likely to be visible are loaded first, we first load
@@ -233,6 +238,8 @@ final class PaginationView: UIView, Loggable {
                 continue
             }
         }
+
+        previousView?.pageDidDisappear()
 
         loadPages()
     }

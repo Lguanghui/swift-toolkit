@@ -4,10 +4,11 @@
 //  available in the top-level LICENSE file of the project.
 //
 
-import ReadiumShared
+import Foundation
 
-extension Metadata {
-    var epubLayout: EPUBLayout {
-        layout == .fixed ? .fixed : .reflowable
+extension Double {
+    /// Returns this number when it is finite and greater than 0.
+    func orNilIfNotPositive() -> Double? {
+        isFinite && self > 0 ? self : nil
     }
 }

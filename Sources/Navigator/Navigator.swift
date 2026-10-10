@@ -13,6 +13,13 @@ public protocol Navigator: AnyObject {
     /// Publication being rendered.
     var publication: Publication { get }
 
+    /// Reading order actually rendered by the navigator.
+    ///
+    /// It may differ from `publication.readingOrder` when the navigator was
+    /// initialized with a custom reading order, or when a resource variant is
+    /// selected for rendering.
+    var readingOrder: [Link] { get }
+
     /// Current position in the publication.
     /// Can be used to save a bookmark to the current position.
     var currentLocation: Locator? { get }
@@ -121,7 +128,7 @@ public extension Navigator {
     func navigator(_ navigator: Navigator, shouldNavigateToNoteAt link: Link, content: String, referrer: String?) -> Bool
 
     /// Called when an error occurs while attempting to load a resource.
-    func navigator(_ navigator: Navigator, didFailToLoadResourceAt href: RelativeURL, withError error: ReadError)
+    func navigator(_ navigator: Navigator, didFailToLoadResourceAt href: AnyURL, withError error: ReadError)
 }
 
 public extension NavigatorDelegate {
@@ -139,7 +146,7 @@ public extension NavigatorDelegate {
         true
     }
 
-    func navigator(_ navigator: Navigator, didFailToLoadResourceAt href: RelativeURL, withError error: ReadError) {}
+    func navigator(_ navigator: Navigator, didFailToLoadResourceAt href: AnyURL, withError error: ReadError) {}
 }
 
 public enum NavigatorError: Error, Sendable {

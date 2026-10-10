@@ -65,6 +65,11 @@ open class PDFNavigatorViewController:
     private var pdfViewDefaultBackgroundColor: UIColor!
 
     public let publication: Publication
+
+    public var readingOrder: [Link] {
+        publication.readingOrder
+    }
+
     private let initialLocation: Locator?
     private let config: Configuration
     private let editingActions: EditingActionsController
@@ -372,8 +377,11 @@ open class PDFNavigatorViewController:
         let locator = publication.normalizeLocator(locator)
 
         let readingOrderIndex: Int? =
-            if isPDFFile { 0 }
-            else { publication.readingOrder.firstIndexWithHREF(locator.href) }
+            if isPDFFile {
+                0
+            } else {
+                publication.readingOrder.firstIndexWithHREF(locator.href)
+            }
 
         guard let readingOrderIndex else {
             return false
@@ -531,7 +539,7 @@ open class PDFNavigatorViewController:
             return nil
         }
 
-        let href = locator.href.replacingFragment(locator.locations.fragments.first)
+        let href = locator.href.replacingFragment(locator.locations.fragments.first.flatMap(URLFragment.init(percentDecoded:)))
         return Link(href: href.string, mediaType: locator.mediaType)
     }
 

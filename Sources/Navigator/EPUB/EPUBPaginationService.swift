@@ -154,7 +154,7 @@ public final class EPUBPaginationService: NSObject {
 
     static func measure(in webView: WKWebView, resolving links: [Link]) async throws -> Result {
         let anchors = links.compactMap { link -> [String: String]? in
-            guard let fragment = link.url().fragment, !fragment.isEmpty else { return nil }
+            guard let fragment = link.url().fragment?.percentDecoded else { return nil }
             return ["href": link.href, "fragment": fragment]
         }
         let value = try await webView.callAsyncJavaScript(

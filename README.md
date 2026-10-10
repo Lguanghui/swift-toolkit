@@ -91,6 +91,7 @@ Guides are available to help you make the most of the toolkit.
 * [Implementing Highlights](docs/Guides/Navigator/Highlights.md) – add and manage highlights in a publication
 * [Font families in the EPUB navigator](docs/Guides/Navigator/EPUB%20Fonts.md) – support custom font families with reflowable EPUB publications
 * [EPUB image preview](docs/Guides/Navigator/EPUB%20Image%20Preview.md) – detect tapped images and present an image detail view
+* [Playing audiobooks](docs/Guides/Navigator/Audiobook.md) – play an audiobook with the `AudioNavigator` and read the metadata of audio files
 
 ### DRM
 
@@ -134,11 +135,11 @@ Add the following `pod` statements to your `Podfile` for the Readium libraries y
 source 'https://github.com/readium/podspecs'
 source 'https://cdn.cocoapods.org/'
 
-pod 'ReadiumShared', '~> 4.0.0-alpha.1'
-pod 'ReadiumStreamer', '~> 4.0.0-alpha.1'
-pod 'ReadiumNavigator', '~> 4.0.0-alpha.1'
-pod 'ReadiumOPDS', '~> 4.0.0-alpha.1'
-pod 'ReadiumLCP', '~> 4.0.0-alpha.1'
+pod 'ReadiumShared', '~> 4.0.0-alpha.2'
+pod 'ReadiumStreamer', '~> 4.0.0-alpha.2'
+pod 'ReadiumNavigator', '~> 4.0.0-alpha.2'
+pod 'ReadiumOPDS', '~> 4.0.0-alpha.2'
+pod 'ReadiumLCP', '~> 4.0.0-alpha.2'
 ```
 
 Take a look at [CocoaPods's documentation](https://guides.cocoapods.org/using/using-cocoapods.html) for more information.

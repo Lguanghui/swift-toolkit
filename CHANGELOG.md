@@ -5,11 +5,84 @@ All notable changes to this project will be documented in this file. Take a look
 
 ## [Unreleased]
 
+### Added
+
+#### Navigator
+
+* `AudioNavigator.stop()` stops the playback and ends the audio session.
+* The `AudioNavigator` reports the new `MediaPlaybackState.ended` when the playback reaches the end of the publication, by playing or seeking up to it.
+* `MediaPlaybackState.playsWhenReady` indicates whether the player is playing or will as soon as it is ready, e.g. to choose between a play and a pause button.
+
+#### Streamer
+
+* Audio publications without a manifest, such as a standalone M4B or MP3 file or a container of audio files, now have a table of contents built from the chapters embedded in their audio files.
+* Audiobooks without a table of contents now get one from the titles of their reading order resources.
+* New `AudioMetadataReader` to customize how `AudioParser` reads the metadata of each audio file.
+
+### Changed
+
+#### Shared
+
+* `AudioSessionUser.play()` is removed. Conformers must implement the new interruption hooks instead, [see the migration guide](docs/Migration%20Guide.md).
+* `AudioSessionManaging` changed to activate the audio session off the main thread, [see the migration guide](docs/Migration%20Guide.md).
+    * `start(with:isPlaying:)` is now `async`, and returns when the audio session is ready to play.
+    * `end(with:)` takes the `AudioSessionUser` instead of an `AudioSessionToken`, which is removed.
+* `NowPlayingInfo.Media.chapterNumber` moved to `NowPlayingInfo.Playback.chapterNumber`, [see the migration guide](docs/Migration%20Guide.md).
+
+#### Navigator
+
+* `AudioNavigator.play()` now moves on after the end of a resource, instead of doing nothing: it plays the next resource, or restarts from the beginning of the publication after the last one.
+* Seeking with the `AudioNavigator` is no longer confined to the current resource.
+    * `seek(by:)` moves over to the adjacent resources when skipping past the start or the end of the current one, instead of stopping at its bounds.
+    * Seeking up to the end of a resource with `seek(to:)` or `seek(by:)` ends it, like playing up to it. `AudioNavigatorDelegate.navigator(_:shouldPlayNextResource:)` is called, and the playback is paused at the end of the resource when it returns `false`.
+* `AudioNavigatorDelegate.navigator(_:shouldPlayNextResource:)` is no longer called after the last resource. Use the new `MediaPlaybackState.ended` to detect the end of the publication, [see the migration guide](docs/Migration%20Guide.md).
+* `NavigatorDelegate.navigator(_:didFailToLoadResourceAt:withError:)` takes an `AnyURL` instead of a `RelativeURL`, to report resources with an absolute HREF. Implementations must be updated or they are no longer called, [see the migration guide](docs/Migration%20Guide.md).
+
+#### Streamer
+
+* `AudioPublicationManifestAugmentor` is replaced by `AudioMetadataReader`, which reads the metadata of one audio file, [see the migration guide](docs/Migration%20Guide.md).
+
+### Fixed
+
+#### Navigator
+
+* Fixed audio session interruptions:
+    * The TTS pauses when an audio interruption begins, and resumes when it ends.
+    * The audio navigator no longer resumes after an audio interruption if it was paused beforehand.
+* Fixed seeking with the `AudioNavigator`:
+    * The target of a seek in progress is reported as the current time, instead of the old position until the seek completes.
+    * The playback is reported as `.loading` instead of `.paused` during a seek, when it resumes afterwards.
+* [#632](https://github.com/readium/swift-toolkit/issues/632) Fixed decorations being duplicated on both pages when a fixed-layout EPUB is displayed as a two-page spread (contributed by [@mvanhorn](https://github.com/readium/swift-toolkit/pull/915)).
+* Fixed a memory leak in `EPUBNavigatorViewController` when quickly turning the pages of a fixed-layout publication (contributed by [@deltakosh](https://github.com/readium/swift-toolkit/pull/917)).
+
+
+## [4.0.0-alpha.2] - 2026-09-18
+
+### Added
+
+#### Navigator
+
+* The EPUB navigator supports publications mixing reflowable and fixed-layout resources, rendering each resource according to its own layout.
+* New `EPUBNavigatorViewController.Configuration.preferredResourceVariant` to choose which variant of each resource is rendered among its `alternates`, such as the XHTML page or its bitmap fallback.
+    * Bitmap resources in the reading order are rendered as fixed-layout, even in a reflowable publication.
+* New `EPUBNavigatorDelegate.navigator(_:contentInsetFor:)` to customize the content insets of a spread according to its `EPUBLayout`, for example to add margins only around the reflowable resources of a mixed-layout publication. It takes precedence over `navigatorContentInset(_:)`.
+* New `Navigator.readingOrder` property returning the reading order actually rendered by the navigator, which may differ from `publication.readingOrder` when a custom reading order or a resource variant is used.
+
 ### Changed
 
 #### Shared
 
 * Converting a `Link` to a `Locator` is now synchronous: `await publication.locate(link)` becomes `publication.locator(for: link)`. The logic moved to `Manifest`, so it is also available as `manifest.locator(for: link)` without a `Publication`.
+
+#### Navigator
+
+* In the EPUB navigator, a fixed-layout resource displayed on its own when spreads are enabled is now centered, unless the publication provides an explicit page position (e.g. `page-spread-left`). It was previously displayed on the left or right half of the viewport, depending on the reading progression.
+
+#### Streamer
+
+* EPUB spine items with a bitmap fallback are no longer swapped with their fallback. The spine item stays in the reading order and the bitmap is available in its `alternates`.
+    * This changes the resources rendered by default and the href of the reported locations. Locations saved with the previous version are still restored by the EPUB navigator.
+    * Use `EPUBNavigatorViewController.Configuration.preferredResourceVariant = .image` in the EPUB navigator configuration to render the bitmaps like before.
 
 #### LCP
 
@@ -17,13 +90,24 @@ All notable changes to this project will be documented in this file. Take a look
 
 ### Fixed
 
+#### Shared
+
+* [#876](https://github.com/readium/swift-toolkit/issues/876) Fixed a crash (`String index is out of bounds`) in `ContentSearchService` when searching a publication containing characters merging with the surrounding text, such as combining diacritical marks.
+
 #### Navigator
 
 * [#121](https://github.com/readium/swift-toolkit/issues/121) HTML `<audio>` and `<video>` elements are now paused when the resource moves off-screen in the EPUB navigator, rather than continuing to play in the background.
+* Fixed the PDF navigator's content being inset by the surrounding safe area (e.g. the navigation bar) on iOS 27.
+* [#112](https://github.com/readium/swift-toolkit/issues/112) In the paginated EPUB navigator, horizontal swipes over the top and bottom margins of a reflowable resource now turn the page, instead of skipping to the previous or next resource.
+
+#### Streamer
+
+* [#85](https://github.com/readium/swift-toolkit/issues/85) When an EPUB declares the same metadata with both an EPUB 2 `<meta name=>` tag and an EPUB 3 `<meta property=>` or `<dc:x>` element, the EPUB 3 value now takes precedence and the EPUB 2 one is ignored.
 
 #### LCP
 
 * The CRL used to validate LCP licenses is now checked to be a genuine X.509 CRL before being cached. Networks with a captive portal (e.g. on a plane) could return their login page with a `200 OK` status, which was then cached for seven days and prevented opening LCP publications. An invalid CRL cached by a previous version is now ignored instead of waiting for its expiration.
+* [#579](https://github.com/readium/swift-toolkit/issues/579) Streamed LCP audiobooks now start playing almost immediately. Resources encrypted with AES-CBC are decrypted and served in chunks, instead of being fully downloaded and decrypted upfront.
 
 
 ## [4.0.0-alpha.1] - 2026-08-14
@@ -63,8 +147,6 @@ All notable changes to this project will be documented in this file. Take a look
 * The deprecated `ReadiumAdapterGCDWebServer` and `ReadiumAdapterLCPSQLite` adapter packages have been removed.
 * The `ReadiumInternal` package has been removed. Its utilities were internal helpers and are now folded into `ReadiumShared` with `package` visibility. If you imported `ReadiumInternal` directly, remove the import.
 
-
-<!-- ## [Unreleased] -->
 
 ## [3.11.0] - 2026-07-17
 
@@ -1349,3 +1431,4 @@ progression. Now if no reading progression is set, the `effectiveReadingProgress
 [3.10.0]: https://github.com/readium/swift-toolkit/compare/3.9.0...3.10.0
 [3.11.0]: https://github.com/readium/swift-toolkit/compare/3.10.0...3.11.0
 [4.0.0-alpha.1]: https://github.com/readium/swift-toolkit/compare/3.11.0...4.0.0-alpha.1
+[4.0.0-alpha.2]: https://github.com/readium/swift-toolkit/compare/4.0.0-alpha.1...4.0.0-alpha.2

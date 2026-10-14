@@ -429,6 +429,11 @@ class EPUBSpreadView: UIView, Loggable, PageView {
         spreadLoadTask?.cancel()
         spreadLoadTask = Task { @MainActor in
             isSpreadLoaded = true
+            if spread.layout(in: viewModel.publication) == .reflowable,
+               let script = viewModel.cssPropertiesScript {
+                await evaluateScript(script)
+            }
+            guard !Task.isCancelled else { return }
             applySettings()
             await spreadDidLoad()
             await delegate?.spreadViewDidLoad(self)

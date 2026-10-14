@@ -317,6 +317,7 @@ enum EPUBScriptScope {
     // MARK: - Readium CSS
 
     private var css: ReadiumCSS
+    private var cssRevision = 0
     private let servedFonts: [FileURL: AbsoluteURL]
 
     func injectReadiumCSS<HREF: URLConvertible>(in resource: Resource, at href: HREF) -> Resource {
@@ -347,8 +348,8 @@ enum EPUBScriptScope {
     }
 
     private func updateCSS(with settings: EPUBSettings, commitNow: Bool) {
-        let previous = css
         css.update(with: settings)
+        cssRevision += 1
 
         // HTML resources in the cache have the CSS already injected at the time
         // they were first served. Evict them so that any future resource load
@@ -358,39 +359,38 @@ enum EPUBScriptScope {
         server.clearResourceCache { _, mediaType in mediaType.isHTML }
 
         if commitNow {
-            commitCSSChange(from: previous, to: css)
+            if let script = cssPropertiesScript {
+                delegate?.epubNavigatorViewModel(self, runScript: script, in: .loadedResources)
+            }
         }
     }
 
-    private func commitCSSChange(from previous: ReadiumCSS, to new: ReadiumCSS) {
+    /// A complete snapshot also repairs a restored document whose CSS no longer
+    /// matches native settings, even when the submitted preferences are unchanged.
+    var cssPropertiesScript: String? {
         var properties: [String: String?] = [:]
-        let rsProperties = new.rsProperties.cssProperties()
-        if previous.rsProperties.cssProperties() != rsProperties {
-            for (k, v) in rsProperties {
-                properties[k] = v
-            }
+        for (key, value) in css.rsProperties.cssProperties() {
+            properties.updateValue(value, forKey: key)
         }
-        let userProperties = new.userProperties.cssProperties()
-        if previous.userProperties.cssProperties() != userProperties {
-            for (k, v) in userProperties {
-                properties[k] = v
-            }
+        for (key, value) in css.userProperties.cssProperties() {
+            properties.updateValue(value, forKey: key)
         }
-        if !properties.isEmpty {
-            guard
-                let data = try? JSONSerialization.data(withJSONObject: properties),
-                let json = String(data: data, encoding: .utf8)
-            else {
-                log(.error, "Failed to serialize CSS properties to JSON")
-                return
-            }
+        guard let data = try? JSONSerialization.data(withJSONObject: properties),
+              let json = String(data: data, encoding: .utf8) else {
+            log(.error, "Failed to serialize CSS properties to JSON")
+            return nil
+        }
 
-            delegate?.epubNavigatorViewModel(
-                self,
-                runScript: "readium.setCSSProperties(\(json));",
-                in: .loadedResources
-            )
-        }
+        // Tasks waiting for preloaded spreads may finish out of order. A late
+        // script must never overwrite a newer theme in the same document.
+        return """
+        (() => {
+            const revision = \(cssRevision);
+            if ((window.__readiumCSSRevision ?? -1) > revision) return;
+            readium.setCSSProperties(\(json));
+            window.__readiumCSSRevision = revision;
+        })();
+        """
     }
 
     // MARK: - Accessibility

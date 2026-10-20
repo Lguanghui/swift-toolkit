@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file. Take a look
 
 ### Added
 
+#### Shared
+
+* New experimental `Publication.timeline()` API. A `Timeline` lays out the table of contents on the reading order, to answer questions such as "which chapter am I in?", "what's the next chapter?" or "how long is this chapter?". It is available for audiobooks, EPUB (limited support) and PDF.
+
 #### Navigator
 
 * `AudioNavigator.stop()` stops the playback and ends the audio session.
@@ -16,7 +20,10 @@ All notable changes to this project will be documented in this file. Take a look
 #### Streamer
 
 * Audio publications without a manifest, such as a standalone M4B or MP3 file or a container of audio files, now have a table of contents built from the chapters embedded in their audio files.
+    * The metadata of the audio files of a ZIP or ZAB package is read too, when the package is stored on the device and its files are stored without compression, [see the user guide](docs/Guides/Navigator/Audiobook.md#metadata-of-audio-files).
+    * `AudioParser.Configuration.containerEntriesMetadataPolicy` reads the audio files of a remote package, or opens a package without reading them.
 * Audiobooks without a table of contents now get one from the titles of their reading order resources.
+    * `AudioParser.Configuration.generatesTableOfContentsFromReadingOrder` and `ReadiumWebPubParser.Configuration.generatesAudiobookTableOfContentsFromReadingOrder` disable it.
 * New `AudioMetadataReader` to customize how `AudioParser` reads the metadata of each audio file.
 
 ### Changed
@@ -44,6 +51,13 @@ All notable changes to this project will be documented in this file. Take a look
 
 ### Fixed
 
+#### Shared
+
+* Minizip adapter improvements:
+    * Seeking in the entry of a local ZIP package stored without compression no longer reads the entry again from its start.
+    * Fixed a crash when reading a corrupted compressed entry of a local ZIP package.
+* Fixed missing items in the table of contents of some PDFs, when their named destinations are declared as dictionaries.
+
 #### Navigator
 
 * Fixed audio session interruptions:
@@ -54,6 +68,7 @@ All notable changes to this project will be documented in this file. Take a look
     * The playback is reported as `.loading` instead of `.paused` during a seek, when it resumes afterwards.
 * [#632](https://github.com/readium/swift-toolkit/issues/632) Fixed decorations being duplicated on both pages when a fixed-layout EPUB is displayed as a two-page spread (contributed by [@mvanhorn](https://github.com/readium/swift-toolkit/pull/915)).
 * Fixed a memory leak in `EPUBNavigatorViewController` when quickly turning the pages of a fixed-layout publication (contributed by [@deltakosh](https://github.com/readium/swift-toolkit/pull/917)).
+* Fixed reflowable EPUBs being displayed as a single column on the iPhone Duo unfolded in landscape, by porting the [responsive columns fix of Readium CSS 1.1.2](https://github.com/readium/css/issues/247).
 
 
 ## [4.0.0-alpha.2] - 2026-09-18

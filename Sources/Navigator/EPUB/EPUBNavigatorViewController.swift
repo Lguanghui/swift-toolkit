@@ -302,6 +302,36 @@ open class EPUBNavigatorViewController: InputObservableViewController,
         try EPUBPaginationService(viewModel: viewModel, viewportSize: viewportSize, contentInset: contentInset)
     }
 
+    /// Refreshes delegate-provided insets after container geometry changes,
+    /// including changes which do not trigger an orientation transition.
+    public func refreshLayout() {
+        guard isViewLoaded else { return }
+        viewModel.viewSizeWillChange(view.bounds.size)
+        guard let paginationView else { return }
+        for page in paginationView.loadedViews.values {
+            (page as? EPUBSpreadView)?.applySettings()
+        }
+    }
+
+    /// Commits the latest CSS before restoring a location or measuring pages.
+    /// Returns false while the visible resource is still loading.
+    public func synchronizeLayout() async -> Bool {
+        guard let spread = paginationView?.currentView as? EPUBSpreadView,
+              spread.isSpreadInitialized, let script = viewModel.cssPropertiesScript else { return false }
+        if case .failure = await spread.evaluateScript(script) { return false }
+        spread.layoutIfNeeded()
+        if case .failure = await spread.evaluateScript("document.documentElement.getBoundingClientRect().width") { return false }
+        return true
+    }
+
+    /// Recomputes location after a non-animated layout restoration, before the
+    /// client resumes progress persistence and background pagination.
+    public func refreshCurrentLocationAfterLayout() async {
+        let location = await computeCurrentLocationAndViewport()
+        guard !Task.isCancelled else { return }
+        (currentLocation, viewport) = location
+    }
+
     /// Returns the visual pagination result measured from the currently visible
     /// resource, avoiding a duplicate render in a background web view.
     public func paginationResultForCurrentResource(_ link: Link, resolving links: [Link] = []) async throws -> EPUBPaginationService.Result? {

@@ -387,7 +387,11 @@ enum EPUBScriptScope {
         (() => {
             const revision = \(cssRevision);
             if ((window.__readiumCSSRevision ?? -1) > revision) return;
-            readium.setCSSProperties(\(json));
+            const properties = \(json);
+            for (const [key, value] of Object.entries(properties)) {
+                if (value === null) document.documentElement.style.removeProperty(key);
+                else document.documentElement.style.setProperty(key, value, "important");
+            }
             window.__readiumCSSRevision = revision;
         })();
         """

@@ -99,7 +99,6 @@ public final class EPUBPaginationService: NSObject {
         let contentSize = CGSize(width: viewportSize.width, height: viewportSize.height - contentInset.top - contentInset.bottom)
         guard contentSize.width > 0, contentSize.height > 0 else { throw PaginationError.invalidViewport }
 
-        viewModel.viewSizeWillChange(viewportSize)
         self.viewModel = viewModel
 
         let webViewConfiguration = WKWebViewConfiguration()
@@ -108,6 +107,12 @@ public final class EPUBPaginationService: NSObject {
         webViewConfiguration.suppressesIncrementalRendering = true
         webViewConfiguration.defaultWebpagePreferences.allowsContentJavaScript = false
         webViewConfiguration.setURLSchemeHandler(viewModel.server, forURLScheme: viewModel.server.scheme)
+        // Freeze the same explicit columns and margins used by the visible reader.
+        // An unattached web view must not infer these from device viewport segments,
+        // or pick up later settings through the shared resource server.
+        if let script = viewModel.cssPropertiesScript {
+            webViewConfiguration.userContentController.addUserScript(WKUserScript(source: script, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
+        }
 
         webView = WKWebView(frame: CGRect(origin: .zero, size: contentSize), configuration: webViewConfiguration)
         super.init()

@@ -565,6 +565,12 @@ open class PDFNavigatorViewController:
 
     public private(set) var settings: PDFSettings
 
+    /// Updates zoom limits after container resizing without recreating the document view.
+    public func refreshLayout() {
+        pdfView?.layoutDocumentView()
+        updateScaleFactors(zoomToFit: false)
+    }
+
     public func submitPreferences(_ preferences: PDFPreferences) {
         settings = PDFSettings(
             preferences: preferences,

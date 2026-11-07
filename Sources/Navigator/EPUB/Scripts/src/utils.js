@@ -6,7 +6,7 @@
 
 // Catch JS errors to log them in the app.
 
-import { TextQuoteAnchor } from "./vendor/hypothesis/anchoring/types";
+import { rangeFromLocator as resolveLocatorRange } from "./locator-range";
 import { getCurrentSelection } from "./selection";
 
 window.addEventListener(
@@ -294,48 +294,7 @@ function snapCurrentPosition() {
 
 export function rangeFromLocator(locator) {
   try {
-    let locations = locator.locations;
-    let text = locator.text;
-    if (text && text.highlight) {
-      var root;
-      if (locations && locations.cssSelector) {
-        root = document.querySelector(locations.cssSelector);
-      }
-      if (!root) {
-        root = document.body;
-      }
-
-      let anchor = new TextQuoteAnchor(root, text.highlight, {
-        prefix: text.before,
-        suffix: text.after,
-      });
-
-      return anchor.toRange();
-    }
-
-    if (locations) {
-      var element = null;
-
-      if (!element && locations.cssSelector) {
-        element = document.querySelector(locations.cssSelector);
-      }
-
-      if (!element && locations.fragments) {
-        for (const htmlId of locations.fragments) {
-          element = document.getElementById(htmlId);
-          if (element) {
-            break;
-          }
-        }
-      }
-
-      if (element) {
-        let range = document.createRange();
-        range.setStartBefore(element);
-        range.setEndAfter(element);
-        return range;
-      }
-    }
+    return resolveLocatorRange(locator);
   } catch (e) {
     logError(e);
   }

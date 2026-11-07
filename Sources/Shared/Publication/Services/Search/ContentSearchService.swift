@@ -557,7 +557,20 @@ private actor Iterator: SearchIterator, Loggable {
             $0 = Locator.Text(after: after, before: before, highlight: highlight)
         })
 
-        return strippedForSnippetPositioning(locator)
+        // A display snippet may reach outside the owning element, but only the
+        // matched text must fit inside the navigation scope. Keep the precise
+        // selector when every touched segment belongs to the same DOM element.
+        let selector = segmentLocator.locations.cssSelector
+        let fitsScope = selector != nil && entries.allSatisfy { entry in
+            entry.segments.allSatisfy { segment in
+                let start = entry.startOffset + segment.range.lowerBound
+                let end = entry.startOffset + segment.range.upperBound
+                return end <= matchStart || start >= matchEnd || segment.locator.locations.cssSelector == selector
+            }
+        }
+        return locator.copy(locations: {
+            if !fitsScope { $0.cssSelector = nil }
+        })
     }
 
     /// Finds the segment locator for a given window offset.
@@ -687,31 +700,4 @@ private actor Iterator: SearchIterator, Loggable {
         }
     }
 
-    // MARK: - CSS selector workaround
-
-    // FIXME: Temporary workaround – remove when SearchResultItem is introduced.
-    //
-    // Why it exists: snippets now span multiple content elements within the
-    // same resource, to provide more context to the user in the user interface.
-    // So the `cssSelector` in the locator's `locations` may point to a single
-    // DOM node that does not contain the full before/after text. The renderer
-    // would anchor to that node and fail to find the highlight when it extends
-    // across sibling elements.
-    //
-    // In the future, we might introduce a dedicated `SearchResultItem` type
-    // that carries both a full *display* snippet (crossing elements) and a
-    // separate *precise* locator (with `cssSelector`) for navigation. When that
-    // type is introduced:
-    //   1. Restore the `cssSelector` in the locator produced by `makeLocator`.
-    //   2. Move the cross-element snippet text into SearchResultItem's display
-    //      field.
-    //   3. Delete this method entirely.
-    private func strippedForSnippetPositioning(_ locator: Locator) -> Locator {
-        guard locator.locations.cssSelector != nil else {
-            return locator
-        }
-        return locator.copy(locations: {
-            $0.cssSelector = nil
-        })
-    }
 }

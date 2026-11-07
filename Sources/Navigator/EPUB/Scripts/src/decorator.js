@@ -10,6 +10,7 @@ import {
   toNativeRect,
 } from "./rect";
 import { log, logErrorMessage, rangeFromLocator } from "./utils";
+import { registerDecorationRoot } from "./locator-range";
 
 // Polyfill for iOS 13.3
 import { ResizeObserver as ResizeObserverPolyfill } from "@juggle/resize-observer";
@@ -378,6 +379,7 @@ export function DecorationGroup(groupId, groupName) {
     if (!container) {
       container = document.createElement("div");
       container.id = groupId;
+      registerDecorationRoot(container);
       container.dataset.group = groupName;
       container.style.pointerEvents = "none";
 

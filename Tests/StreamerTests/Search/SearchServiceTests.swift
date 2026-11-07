@@ -202,18 +202,17 @@ struct SearchServiceTests {
             #expect(locator.locations.otherLocations["cssSelector"] == nil)
         }
 
-        // FIXME: To restore after dropping strippedForSnippetPositioning
-        /// A single-element match should preserve the `cssSelector` set by the
-        /// HTML content iterator.
-//        @Test(arguments: configs())
-//        func singleElementMatchPreservesCssSelector(config: SearchServiceTestConfig) async throws {
-//            guard config.supportsCrossElementSearch else { return }
-//            let pub = try await openPublication(.reflowable, config: config)
-//            let results = try await search(pub, query: "wonderland")
-//
-//            let locator = try #require(results.first)
-//            #expect(locator.locations.otherLocations["cssSelector"] != nil)
-//        }
+        /// Display context may span adjacent paragraphs without losing the
+        /// precise scope of a match contained in one paragraph.
+        @Test(arguments: configs())
+        func singleElementMatchPreservesCssSelector(config: SearchServiceTestConfig) async throws {
+            let pub = try await openPublication(.reflowable, config: config)
+            let results = try await search(pub, query: "wonderland")
+            let locator = try #require(results.first)
+            #expect(locator.locations.cssSelector != nil)
+            #expect(locator.text.before != nil)
+            #expect(locator.text.after != nil)
+        }
     }
 
     struct CaseSensitivity {

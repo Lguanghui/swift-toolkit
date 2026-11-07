@@ -1,6 +1,6 @@
 module.exports = {
   transform: {
-    "^.+\\.ts$": ["ts-jest", { tsconfig: "tsconfig.test.json" }],
+    "^.+\\.[jt]s$": "babel-jest",
   },
   testMatch: ["**/*.test.ts"],
   testEnvironment: "jsdom",
